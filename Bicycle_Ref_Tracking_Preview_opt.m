@@ -15,7 +15,7 @@ ny = 4;      % Number of outputs
 
 %% MPC data
 C = eye(4); 
-Q = [1 0 0 0; 0 1 0 0; 0 0 0 0; 0 0 0 1];
+Q = [10 0 0 0; 0 10 0 0; 0 0 0 0; 0 0 0 10];
 P = Q;
 R = eye(2);
 N = 6;
@@ -67,7 +67,7 @@ xclloop(:,1) = xk;
 umpc_closedloop=[];
 ref=[];
 ym=[];
-Lsim = 100; % Length of simulation
+Lsim = 150; % Length of simulation
 
 %% Constructing reference signal
 
@@ -75,7 +75,7 @@ for i = 1:Lsim+N+1
     if i<40
         ref=[ref,zeros(4,1)];
     else
-        ref=[ref,[10*sin(.01*i);0;1;pi/2*0.01*sqrt(i)]];
+        ref=[ref,[10; 0 ; 1 ; 0]];
     end
 end
 
@@ -123,7 +123,7 @@ for l=1:length(future_r)
  
       constr13 = constr3;
     
-    options = sdpsettings('solver','ipopt','verbose',1,'usex',0);
+    options = sdpsettings('solver','fmincon','verbose',1,'usex',0);
     
     optimize(constr13,cost,options);
     
@@ -206,6 +206,11 @@ plot(xclloop(4,:)); grid on
 hold on;
 plot(xrefk_clloop(4,:),'r'); grid on
 legend(' \psi Closed loop actual','Reference');
+
+figure;
+plot(xclloop(1,:),xclloop(2,:)); 
+
+
 
 %% 
 % OL = Open Loop
