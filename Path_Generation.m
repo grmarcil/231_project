@@ -66,7 +66,7 @@ curve_dist = [0];
 for i = 2:length(curve_x)
     dx = curve_x(i) - curve_x(i-1);
     dy = curve_y(i) - curve_y(i-1);
-    curve_dist(i) = curve_dist(i-1) + sqrt(dx + dy);
+    curve_dist(i) = curve_dist(i-1) + sqrt(dx^2 + dy^2);
 end
 
 % Problem parameters
