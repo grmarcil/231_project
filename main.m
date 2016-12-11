@@ -34,7 +34,7 @@ hold off
 % Initial state (x,y,v,psi)
 z0 = [lw/2;-ll-lw;v;pi/2];
 % Find distance along path and next N steps of z_ref
-[z_ref, dist] = Generate_Ref(z0, curve, 0, N, dt);
+[z_ref, u_ref, dist] = Generate_Ref(z0, curve, 0, N, dt,1.738);
 % Plot z_ref
 hold on; plot(z_ref(1,:), z_ref(2,:), 'xg'); hold off;
 %% Input Reference Generation

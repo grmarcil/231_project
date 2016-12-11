@@ -13,14 +13,17 @@
 
 function path = Generate_Path()
     lane_width = 3;
-    lane_length = 10;
+    lane_length = 30;
     car_length = 4.9;
     % shorthand vars
     lw = lane_width;
     ll = lane_length;
     % car begins at bottom of vertical lane, make a right turn through
     % intersection, then follows to end of horizontal lane
-    waypoints = [[lw/2; -ll-lw], [lw/2;  -lw-car_length/2], [lw/2; -lw/2], [lw + car_length/2; -lw/2], [lw+ll;  -lw/2]];
+    % Right Hand Turn
+    %waypoints = [[lw/2; -ll-lw], [lw/2;  -lw-car_length/2], [lw/2; -lw/2], [lw + car_length/2; -lw/2], [lw+ll;  -lw/2]];
+    % Left Hand Turn
+    waypoints = [[lw/2; -ll-lw], [lw/2;  -lw-car_length/2], [lw/2; lw/2], [-lw - car_length/2; lw/2], [-lw-ll;  lw/2]];
 
     % Interpolate straight line segments before curve fitting
     interp_pts = 10; % number of straight line interpolation points

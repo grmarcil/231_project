@@ -12,14 +12,16 @@
 % predicted_dist: last predicted distance travelled along the curve, defaults to 0
 % N: MPC horizon
 % dt: MPC time step
+% lr: dist from car COM to rear axle
 % ------------------------------------------------------------------------------
 % z_ref: state reference (4xN+1 vector)
+% u_ref: input reference (2xN vector)
 % dist: project car's current position onto curve, return curve distance
 % The main algorithm should update predicted distance with
 % predicted_dist = dist + v*dt before running this function again.
 % ------------------------------------------------------------------------------
 
-function [z_ref, dist] = Generate_Ref(z0,curve,predicted_dist,N,dt)
+function [z_ref, u_ref, dist] = Generate_Ref(z0,curve,predicted_dist,N,dt,lr)
     if ~exist('predicted_dist', 'var')
         predicted_dist = 0;
     end
@@ -38,7 +40,16 @@ function [z_ref, dist] = Generate_Ref(z0,curve,predicted_dist,N,dt)
         psi_ref_i = curve.interp_psi(dist_k);
 
         % will have to adapt for non-static velocities
-        z_ref = [z_ref, [x_ref_i; y_ref_i; z0(3); psi_ref_i]];
+        z_ref = [z_ref, [x_ref_i; y_ref_i; v; psi_ref_i]];
+    end
+    
+    u_ref = [];
+    for i=1:N
+        z_1 = z_ref(:,i);
+        z_2 = z_ref(:,i+1);
+        a_k = (z_2(3) - z_1(3))/dt;
+        beta_k = asin(lr*(z_2(4)-z_1(4))/(z_1(3)*dt));
+        u_ref = [u_ref, [a_k; beta_k]];
     end
 end
 
