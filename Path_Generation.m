@@ -73,7 +73,7 @@ N = 6;
 curve_psi = curve.psi;
 v = v*ones(1,length(curve_psi)); 
 curve_x = curve.x;
-curve_y = curve.x; 
+curve_y = curve.y;
 end
 
 
