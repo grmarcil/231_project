@@ -139,26 +139,26 @@ end
 figure;
 Plot_Simulation(xclloop, umpc_closedloop, 3, 10)
 
-figure;
-plot(xclloop(1,:)); grid on
-hold on;
-plot(xrefk_clloop(1,:),'r'); grid on
-legend(' x Closed loop actual','Reference');
-figure;
-plot(xclloop(2,:)); grid on
-hold on;
-plot(xrefk_clloop(2,:),'r'); grid on
-legend(' y Closed loop actual','Reference');
-figure;
-plot(xclloop(3,:)); grid on
-hold on;
-plot(xrefk_clloop(3,:),'r'); grid on
-legend(' v Closed loop actual','Reference');
-figure;
-plot(xclloop(4,:)); grid on
-hold on;
-plot(xrefk_clloop(4,:),'r'); grid on
-legend(' \psi Closed loop actual','Reference');
+% figure;
+% plot(xclloop(1,:)); grid on
+% hold on;
+% plot(xrefk_clloop(1,:),'r'); grid on
+% legend(' x Closed loop actual','Reference');
+% figure;
+% plot(xclloop(2,:)); grid on
+% hold on;
+% plot(xrefk_clloop(2,:),'r'); grid on
+% legend(' y Closed loop actual','Reference');
+% figure;
+% plot(xclloop(3,:)); grid on
+% hold on;
+% plot(xrefk_clloop(3,:),'r'); grid on
+% legend(' v Closed loop actual','Reference');
+% figure;
+% plot(xclloop(4,:)); grid on
+% hold on;
+% plot(xrefk_clloop(4,:),'r'); grid on
+% legend(' \psi Closed loop actual','Reference');
 %% 
 % OL = Open Loop
 % CL = Closed Loop
