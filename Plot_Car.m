@@ -5,7 +5,7 @@
 % --------------------------------------------------------------------------------------------------
 % Plot_Car(z,u,auto,fig,rgb)
 % --------------------------------------------------------------------------------------------------
-% z: coordinates of the car (x,y,phi,v) ([m], [m], [rad], [m/s])
+% z: coordinates of the car (x,y,v,psi) ([m], [m], [rad], [m/s])
 % u: inputs (acceleration, steering angle) ([m/s^2], [rad])
 % auto: structure with geometric data of the car
 % fig: figure handle
@@ -16,7 +16,7 @@
 
 function P = Plot_Car(z,u,auto,fig,rgb)
     % 1) Compute Car Geometry --------------------------------------------------------------------------
-    ageom = autogeometry(z(1),z(2),z(3),u(2),auto);
+    ageom = autogeometry(z(1),z(2),z(4),u(2),auto);
 
     % 2) Plot Options ----------------------------------------------------------------------------------
     % 2.1) Car
@@ -54,16 +54,16 @@ end
 % Georg Schildbach, 12/Dec/2013 --- Automobile
 % Computes the car circumfence, based on current coordinates and geometric data
 % --------------------------------------------------------------------------------------------------
-% ageom = autogeometry(x,y,phi,delta,auto)
+% ageom = autogeometry(x,y,phi,beta,auto)
 % --------------------------------------------------------------------------------------------------
 % x,y,phi: coordinates of the car (in [m], [m], [rad])
-% delta: steering angle [rad]
+% beta: effective steering angle [rad]
 % auto: structure with geometric data of the car
 % --------------------------------------------------------------------------------------------------
 % ageom: structure with car geometry data
 % --------------------------------------------------------------------------------------------------
 
-function ageom = autogeometry(x,y,phi,delta,auto)
+function ageom = autogeometry(x,y,phi,beta,auto)
 
     % 1) Linear Constraints ----------------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ function ageom = autogeometry(x,y,phi,delta,auto)
     ageom.bl = [x - auto.db*cos(phi) ; y - auto.db*sin(phi)] + auto.w/2*ageom.gl;
 
     % 3) Tyres -----------------------------------------------------------------------------------------
-
+    delta = atan((1.738 + 1.738)/1.738*tan(beta));
     ageom.sta = [+cos(phi+delta) ; +sin(phi+delta)];
     ageom.tfr =  ([x;y]+auto.d*ageom.gf+0.75*auto.w/2*ageom.gr)*[1,1] + ...
                                                        [0.5*auto.tyr*ageom.sta,-0.5*auto.tyr*ageom.sta];
