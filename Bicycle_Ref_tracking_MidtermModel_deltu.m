@@ -6,7 +6,6 @@ close all
 warning off
 
 %% Model data
-TS=0.2;
 nx = 3;      % Number of states
 nu = 2;      % Number of inputs
 ny = 3;      % Number of outputs
