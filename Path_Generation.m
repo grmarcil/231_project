@@ -67,7 +67,7 @@ curve.interp_psi = @(dist) interp1(curve.dist, curve.psi, dist);
 % Problem parameters
 % Assuming constant v for now
 v = 4.5; % m/s (~10 mph)
-dt = 0.2;
+dt = 0.02;
 N = 6;
 
 curve_psi = curve.psi;

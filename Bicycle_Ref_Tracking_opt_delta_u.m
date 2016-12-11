@@ -6,9 +6,9 @@ close all
 warning off
 
 %% Model data
-lf=2.45;
-lr=2.45;
-TS=0.2;
+lf=.35;
+lr=.35;
+TS= 0.02;
 nx = 4;      % Number of states
 nu = 2;      % Number of inputs
 ny = 4;      % Number of outputs
@@ -17,8 +17,8 @@ ny = 4;      % Number of outputs
 C = eye(4); 
 Q = eye(4);
 P = Q;
-R = eye(2);
-Rbar = 3*eye(2);
+R = .0001*eye(2);
+Rbar = 100*eye(2);
 N = 6;
 
 %% Defining Variables
@@ -39,36 +39,32 @@ for k = 1:N
     
     objective = objective + (x{k}-xref{k})'*Q*(x{k}-xref{k}) + u{k}'*R*u{k} + (u{k}-up{k})'*Rbar*(u{k}-up{k});
     
-%  objective = objective + (x{k})'*Q*(x{k}) + u{k}'*R*u{k}; 
-    
-
     constr =  x{k+1}(1)== x{k}(1) + x{k}(3).*cos(x{k}(4)+u{k}(2)).*TS;
     constr = [constr; x{k+1}(2)== x{k}(2) + x{k}(3).*sin(x{k}(4)+u{k}(2)).*TS];
     constr = [constr; x{k+1}(3)==x{k}(3) + u{k}(1).*TS];
     constr = [constr; x{k+1}(4)==x{k}(4) + x{k}(3)/lr.*sin(u{k}(2)).*TS];
     
     
-%     constru = [u{k}(2)<=0.6; -u{k}(2)<=0.6];
+constru = [u{k}(2)<=.6; -u{k}(2)<=.6];
+    
        
     if k~=1 && k~=N
-%     constru = [constru, up{k}==u{k-1}];
-      constru = [up{k}==u{k-1}];
+      constru = [constru, up{k}==u{k-1}];
     
-    else
-        constru = [];
-    end
+    end 
         
-%     constru = [constru; u{k}(1)<=1.5*TS; -u{k}(1)<=1.5*TS];
-%     constru = [constru; up{k}(1)<=1.5*TS; -up{k}(1)<=1.5*TS];
-%     constru = [constru; up{k}(2)<=0.6; -up{k}(2)<=0.6];
-%       
+      constru = [constru; u{k}(1)<=1.5*TS; -u{k}(1)<=1.5*TS];
+      constru = [constru; up{k}(1)<=1.5*TS; -up{k}(1)<=1.5*TS];      
 %     constrx = [x{k}(1)<=20; -x{k}(1)<=20]; 
 %     constrx = [constrx; x{k}(2)<=10; -x{k}(2)<=5];
 %     constrx = [constrx; x{k}(3)<=10; -x{k}(3)<=10];
 %     constrx = [constrx; x{k}(4)<=2*pi; -x{k}(4)<=2*pi];
+      
+      constrxref = norm(x{k}-xref{k},inf)<=5;
     
 %     construx = [constru, constrx];
-      construx = constru;
+      
+    construx = [constru,constrxref];
     
     constraints = [constraints, constr];
     constraints = [constraints, construx];
@@ -76,9 +72,6 @@ for k = 1:N
 end
 
 objective = objective + (x{N+1}-xref{N+1})'*P*(x{N+1}-xref{N+1});
-
-% objective = objective + (x{N+1})'*P*(x{N+1});
-
 
 %% Constructing reference signal
 
@@ -91,7 +84,7 @@ ref = [ref_x;ref_y;ref_v;ref_psi];
 xk = ref(:,1);
 xclloop(:,1) = xk;
 umpc_closedloop=[];
-Lsim = 50; % Length of simulation
+Lsim = 100; % Length of simulation
 
 
 %% Simulating MPC controller
@@ -144,32 +137,28 @@ end
 
 %% Plot Results
 figure;
+Plot_Simulation(xclloop, umpc_closedloop, 3, 10)
+
+figure;
 plot(xclloop(1,:)); grid on
 hold on;
 plot(xrefk_clloop(1,:),'r'); grid on
-legend(' x Closed loop actual','Reference'); 
-
-
+legend(' x Closed loop actual','Reference');
 figure;
 plot(xclloop(2,:)); grid on
 hold on;
 plot(xrefk_clloop(2,:),'r'); grid on
-legend(' y Closed loop actual','Reference'); 
-
-
+legend(' y Closed loop actual','Reference');
 figure;
 plot(xclloop(3,:)); grid on
 hold on;
 plot(xrefk_clloop(3,:),'r'); grid on
-legend(' v Closed loop actual','Reference'); 
-
-
+legend(' v Closed loop actual','Reference');
 figure;
 plot(xclloop(4,:)); grid on
 hold on;
 plot(xrefk_clloop(4,:),'r'); grid on
 legend(' \psi Closed loop actual','Reference');
-
 %% 
 % OL = Open Loop
 % CL = Closed Loop

@@ -49,7 +49,7 @@ for k = 1:N
 
 %     constru = [constru; u{k}(1)<=inf; -u{k}(1)<=L/tan(delmax)];
 
-%     constrxref = [norm(x{k}-xref{k},inf)<=0.4];
+      constrxref = [norm(x{k}-xref{k},inf)<=0.4];
     
 %     constrx = [x{k}(1)<=20; -x{k}(1)<=20]; 
 %     constrx = [constrx; x{k}(2)<=10; -x{k}(2)<=5];
