@@ -22,11 +22,11 @@ function animation = Plot_Simulation(z_cl, u_cl, lane_width, lane_length)
 
     %% Define car
     % Full refactor should define auto in main.m and pass it as a parameter to Plot_Simulation
-    auto.w = 2.0;                % car width [m]
-    auto.l = 5.0;                % car length [m]
-    auto.db = 1.2;               % rear axis position, from back [m]
-    auto.df = 1.0;               % front axis position, from front [m]
-    auto.tyr = 0.8;              % tyre diameter [m]
+    auto.w = .7;                % car width [m]
+    auto.l = 1.5;                % car length [m]
+    auto.db = .4;               % rear axis position, from back [m]
+    auto.df = .4;               % front axis position, from front [m]
+    auto.tyr = .4;              % tyre diameter [m]
     auto.dmax = 25*pi/180;       % maximum front wheel steering angle [rad]
     auto.drat = 14.5;            % ratio between steering wheel angle and front wheel angle
     auto.d = auto.l - auto.df - auto.db;  % axis distance [m]
