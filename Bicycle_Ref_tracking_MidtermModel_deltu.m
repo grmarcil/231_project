@@ -45,16 +45,17 @@ for k = 1:N
 
     
     
-    constru = [u{k}(2)<=pi; -u{k}(2)<=pi];
-    constru = [constru; u{k}(1)<=inf; -u{k}(1)<=L/tan(delmax)];
+      constru = [u{k}(2)<=pi; -u{k}(2)<=pi];
 
-    constrxref = [norm(x{k}-xref{k},inf)<=0.4];
+%     constru = [constru; u{k}(1)<=inf; -u{k}(1)<=L/tan(delmax)];
+
+%     constrxref = [norm(x{k}-xref{k},inf)<=0.4];
     
 %     constrx = [x{k}(1)<=20; -x{k}(1)<=20]; 
 %     constrx = [constrx; x{k}(2)<=10; -x{k}(2)<=5];
 %     constrx = [constrx; x{k}(3)<=10; -x{k}(3)<=10];
 %     
-     construx = [constru, constrxref];
+     construx = [constru];
      
 
 if k~=1 && k~=N
@@ -139,4 +140,4 @@ end
 
 %% Plot Results
 
-car_plot(umpc_closedloop,ref(:,1));
+Plot_Simulation(xclloop, umpc_closedloop, 2, 10)

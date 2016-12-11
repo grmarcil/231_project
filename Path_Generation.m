@@ -7,8 +7,8 @@ function [curve_x, curve_y, v , curve_psi ] = Path_Generation()
 lane_width = 3;
 lane_length = 10;
 
-car_width = 1.85;
-car_length = 4.9;
+car_width = .7;
+car_length = 1.5;
 
 turn_radius = 5.56;
 
