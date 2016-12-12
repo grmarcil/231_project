@@ -2,7 +2,7 @@
 % Greg Marcil, 10/Dec/2016
 % Creates animation of a car passing through a two-way intersection
 % ------------------------------------------------------------------------------
-% Plot_Simulation(z_cl, z_ref, u_cl, lane_width, lane_length)
+% Plot_Simulation(z_cl, z_ref, u_cl, lane_width, lane_length, path)
 % ------------------------------------------------------------------------------
 % z_cl: closed loop trajectory of the ego vehicle (array of 4x1 state vectors
 % (x,y,psi,v) ([m],[m],[rad],[m/s]
