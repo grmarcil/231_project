@@ -15,3 +15,7 @@ octave-workspace
 
 # Data files
 *.csv
+
+# Misc
+papers/
+tags
