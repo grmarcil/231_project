@@ -5,7 +5,7 @@
 % Plot_Simulation(z_cl, z_ref, u_cl, lane_width, lane_length)
 % ------------------------------------------------------------------------------
 % z_cl: closed loop trajectory of the ego vehicle (array of 4x1 state vectors
-% (x,y,phi,v) ([m],[m],[rad],[m/s]
+% (x,y,psi,v) ([m],[m],[rad],[m/s]
 % waypoints: target points used to generate ref trajectory
 % z_ref: state reference trajectory
 % u_cl: closed loop input trajectory of the ego vehicle (array of 2x1 input

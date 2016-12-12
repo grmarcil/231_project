@@ -5,7 +5,7 @@
 % --------------------------------------------------------------------------------------------------
 % Plot_Car(z,u,auto,fig,rgb)
 % --------------------------------------------------------------------------------------------------
-% z: coordinates of the car (x,y,v,psi) ([m], [m], [rad], [m/s])
+% z: coordinates of the car (x,y,psi,v) ([m], [m], [rad], [m/s])
 % u: inputs (acceleration, steering angle) ([m/s^2], [rad])
 % auto: structure with geometric data of the car
 % fig: figure handle
@@ -16,7 +16,7 @@
 
 function P = Plot_Car(z,u,auto,fig,rgb)
     % 1) Compute Car Geometry --------------------------------------------------------------------------
-    ageom = autogeometry(z(1),z(2),z(4),u(2),auto);
+    ageom = autogeometry(z(1),z(2),z(3),u(2),auto);
 
     % 2) Plot Options ----------------------------------------------------------------------------------
     % 2.1) Car
