@@ -82,9 +82,9 @@ for i = 1:Lsim
     
     [z_ref, u_ref, path_dist] = Generate_Ref(z_k, path, predicted_dist, N, dt, lr);
     
-    %% Changes made to stop and turn 
+ %% Changes made from here on to stop and turn 
     
-    if (all(diff(z_ref(4,:))==0))
+    if (all(diff(z_ref(4,:))==0)) % If straight line ref in a horizon, keep solving MPC  
     
     for k = 1:N
         objective2 = objective + (z{k}-z_ref(:,k))'*Q*(z{k}-z_ref(:,k)) + (u{k}-u_ref(:,k))'*R*(u{k}-u_ref(:,k));
@@ -141,14 +141,14 @@ end
 u_cl = u_cl(:,endstri); 
 z_k = z_cl(:,endstri);
 
-
+%% After a horizon reference denotes psi change, i.e. impending curve, stop MPC and apply braking 
 for i=endstri:Lsim
       
     
       
-    if (z_k(3)>0)  
+    if (z_k(3)>0)   % Reduce positive velocity to 0 by braking; no MPC 
     
-    u_k = [-z_k(3)/dt,0]';
+    u_k = [-z_k(3)/(3*dt),0]';  % Acceleration constraint violated. 
     u_cl = [u_cl, u_k];
     
     %% Simulate plant update
@@ -167,8 +167,9 @@ for i=endstri:Lsim
     u_ref_cl(:,i) = u_ref(:,1);
     u_cl(:,i) = u_k;
     
-     end
+    end
 
+     counter = i
  
 end
 
@@ -176,39 +177,39 @@ end
 animation = Plot_Simulation(z_cl, u_cl, lane_width, lane_length, path);
 
 
-%% Plot Results
-figure;
-plot(z_cl(1,:)); grid on
-hold on;
-plot(z_ref_cl(1,:),'r'); grid on
-legend(' x Closed loop actual','Reference');
-
-figure;
-plot(z_cl(2,:)); grid on
-hold on;
-plot(z_ref_cl(2,:),'r'); grid on
-legend(' y Closed loop actual','Reference');
-
-figure;
-plot(z_cl(3,:)); grid on
-hold on;
-plot(z_ref_cl(3,:),'r'); grid on
-legend(' v Closed loop actual','Reference');
-
-figure;
-plot(z_cl(4,:)); grid on
-hold on;
-plot(z_ref_cl(4,:),'r'); grid on
-legend(' \psi Closed loop actual','Reference');
-
-figure;
-plot(u_cl(1,:)); grid on
-hold on;
-plot(u_ref_cl(1,:),'r'); grid on
-legend(' acceleration Closed loop actual','Reference');
-
-figure;
-plot(u_cl(2,:)); grid on
-hold on;
-plot(u_ref_cl(2,:),'r'); grid on
-legend(' \beta Closed loop actual','Reference');
+% % % Plot Results
+% % figure;
+% % plot(z_cl(1,:)); grid on
+% % hold on;
+% % plot(z_ref_cl(1,:),'r'); grid on
+% % legend(' x Closed loop actual','Reference');
+% % 
+% % figure;
+% % plot(z_cl(2,:)); grid on
+% % hold on;
+% % plot(z_ref_cl(2,:),'r'); grid on
+% % legend(' y Closed loop actual','Reference');
+% % 
+% % figure;
+% % plot(z_cl(3,:)); grid on
+% % hold on;
+% % plot(z_ref_cl(3,:),'r'); grid on
+% % legend(' v Closed loop actual','Reference');
+% % 
+% % figure;
+% % plot(z_cl(4,:)); grid on
+% % hold on;
+% % plot(z_ref_cl(4,:),'r'); grid on
+% % legend(' \psi Closed loop actual','Reference');
+% % 
+% % figure;
+% % plot(u_cl(1,:)); grid on
+% % hold on;
+% % plot(u_ref_cl(1,:),'r'); grid on
+% % legend(' acceleration Closed loop actual','Reference');
+% % 
+% % figure;
+% % plot(u_cl(2,:)); grid on
+% % hold on;
+% % plot(u_ref_cl(2,:),'r'); grid on
+% % legend(' \beta Closed loop actual','Reference');
