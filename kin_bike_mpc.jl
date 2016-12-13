@@ -23,7 +23,7 @@ path = importPath()
 lw = 3;
 ll = 30;
 # y coordinate for stop sign, approaching from below
-y_stop = -lw;
+y_stop = -lw-(lf+df)-0.1;
 
 N = 5 # MPC horizon
 Lsim = 150 # Simulation duration

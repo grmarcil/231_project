@@ -12,12 +12,14 @@ function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_s
   # Auxiliary var used for path reference tracking
   path_dist = 0;
   predicted_dist = 0;
+  # Starting control mode
+  mode = 1;
 
   print("-Starting MPC solver loop-\n")
   for t = 1:Lsim-1
     print("$t,")
     # Solve MPC problem
-    u_vec, z_vec, u_ref, z_ref, path_dist = solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop)
+    u_vec, z_vec, u_ref, z_ref, path_dist, mode = solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,mode)
     # Update history vectors
     z_cl_hist[:,t] = z_t[:]
     u_cl_hist[:,t] = u_vec[:,1]
@@ -34,29 +36,70 @@ function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_s
   return u_cl_hist, z_cl_hist, u_ol_hist, z_ol_hist, u_ref_hist, z_ref_hist
 end
 
-function detectMode(z_t, y_stop)
+function detectMode(z_t, y_stop, last_mode)
+    # should convert this to real state machine package
+    # eg: https://github.com/tinybike/FiniteStateMachine.jl
     stopping_dist = 20
+    epsilon_y = 0.3
+    epsilon_v = 0.01
+
     y_t = z_t[2]
-    dist_to_stop = y_stop - y_t
-    if dist_to_stop <= stopping_dist
-        mode = 2 # approaching stop sign
+    v_t = z_t[4]
+
+    if (y_t >= y_stop - stopping_dist) && (y_t <= (y_stop - epsilon_y))
+        # if the car is within stopping_dist of the intersection but not yet within
+        # epsilon_y of the stop sign
+        # "approaching stop sign"
+        mode = 2
+        print("mode 2\n")
+    # real mode 3 condition
+    #= elseif (last_mode == 2 || last_mode == 3) && (abs(y_stop - y_t) < epsilon_y) && (v_t >= epsilon_v) =#
+    # use this condition to test just full stop
+    elseif (last_mode == 2 || last_mode == 3) && (abs(y_stop - y_t) < epsilon_y)
+        # within epsilon of the stopping point and v_t still positive
+        # "at stop sign, apply full brakes"
+        mode = 3
+        print("mode 3\n")
+    elseif (abs(y_stop - y_t) < epsilon_y) && (v_t < epsilon_v)
+        # v_t ~= 0 and at stop sign
+        # "enter merge decision mode"
+        mode = 4
+        print("mode 4\n")
+    elseif last_mode == 4 || last_mode == 5
+        # finished deciding on merge strategy
+        # "execute merge strategy"
+        mode = 5
+        print("mode 5\n")
     else
         mode = 1
+        print("mode 1\n")
     end
     return mode
 end
 
-function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop)
+function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,last_mode)
     lr=car_size[1]
     Lf=car_size[2]
     Lr=car_size[3]
     w=car_size[4]
 
     # Generate path-following references
-    mode = detectMode(z_t, y_stop)
+    # Idea for full stop: create mode 3, triggered within 0.5m of y_stop
+    # This mode will provide a reference of v=0 and y=y_stop for all horizon
+    # steps. Need anything else? Change costs in this mode? Try second.
+    # Mode 4 will be enterIntersection, triggered by mode=3or4 and v w/in
+    # epsilon of 0. This will run the split front/behind merge controller in
+    # Georg's paper
+    mode = detectMode(z_t, y_stop, last_mode)
     if mode == 1
         u_ref, z_ref, path_dist = generateRef(z_t,path,predicted_dist,N,dt,lr);
     elseif mode == 2
+        u_ref, z_ref, path_dist = generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop);
+    elseif mode == 3
+        u_ref, z_ref, path_dist = generateRefStop(z_t,path,predicted_dist,N,dt,lr,y_stop);
+    elseif mode == 4
+        u_ref, z_ref, path_dist = generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop);
+    elseif mode == 4
         u_ref, z_ref, path_dist = generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop);
     end
 
@@ -65,15 +108,19 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dis
     @variable(mpc,  zmin[i] <= z[i=1:nz,t=1:N+1] <= zmax[i])
     @variable(mpc,  umin[i] <= u[i=1:nu,t=1:N] <= umax[i])
 
+    # Determine cost weights according to control mode
+    if mode == 3
+        # Full stop mode, penalize deviation from y=y_stop and v=0 heavily
+        wz = [1;100;1;100];
+        wu = [1;1];
+    else
+        wz = [1;1;1;1];
+        wu = [1;1];
+    end
     # Cost
-    Q = eye(4);
-    R = eye(2);
-    #= @objective(mpc, Min, sum((z[:,t]-z_ref[:,t])'*Q*(z[:,t]-z_ref[:,t]) for =#
-    #=     t=1:N)[1] + sum((u[:,t]-u_ref[:,t])'*R*(u[:,t]-u_ref[:,t]) for t=1:N-1)[1]) =#
-    @objective(mpc, Min, sum((z[1,t]-z_ref[1,t])^2 + (z[2,t]-z_ref[2,t])^2 +
-        (z[3,t]-z_ref[3,t])^2 + (z[4,t]-z_ref[4,t])^2 for t=1:N+1) +
-        sum((u[1,t]-u_ref[1,t])^2 + (u[2,t]-u_ref[2,t])^2 for t=1:N))
-    #= @objective(mpc, Min, 0) =#
+    @objective(mpc, Min, sum(wz[1]*(z[1,t]-z_ref[1,t])^2 + wz[2]*(z[2,t]-z_ref[2,t])^2 +
+        wz[3]*(z[3,t]-z_ref[3,t])^2 + wz[4]*(z[4,t]-z_ref[4,t])^2 for t=1:N+1) +
+        sum(wu[1]*(u[1,t]-u_ref[1,t])^2 + wu[2]*(u[2,t]-u_ref[2,t])^2 for t=1:N))
 
     # Dynamics constraints across the horizon
     for t = 1:N
@@ -91,7 +138,7 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dis
     # Return the control plan
     # return getvalue(u[:,0])
     #return getvalue(u[:,0]), getvalue(z[:,1])
-    return getvalue(u), getvalue(z), u_ref, z_ref, path_dist
+    return getvalue(u), getvalue(z), u_ref, z_ref, path_dist, mode
 end
 
 function generateRef(z_t,path,predicted_dist,N,dt,lr)
@@ -185,11 +232,32 @@ function generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop)
     return u_ref, z_ref, path_dist
 end
 
+function generateRefStop(z_t,path,predicted_dist,N,dt,lr,y_stop)
+    u_ref = Matrix(2,N);
+    z_ref = Matrix(4,N+1);
+    path_dist = findPathDist(z_t,path,predicted_dist);
+
+    # current x, y, and psi
+    x_t = z_t[1]
+    y_t = z_t[2]
+    psi_t = z_t[3]
+
+    # set all z_ref to target y, 0 velocity, current x and psi
+    for i=1:N+1
+        z_ref[:,i] = [x_t; y_stop; psi_t; 0];
+    end
+
+    # set all input refs to 0
+    for i=1:N
+        u_ref[:,i] = [0;0];
+    end
+    return u_ref, z_ref, path_dist
+end
+
 # project current position onto path and return path dist at that point
 function findPathDist(z0, path, predicted_dist)
-    # Crude but hopefully quick minimization of offset from the path
-    # Could incorporate psi distance if this doesn't work well enough
-    # Or could expand search range, or do a real optimization problem
+    # Coarse but quick minimization of offset from the path
+    # Could do a real optimization problem, haven't tried it
 
     # pick search range
     min_dist = predicted_dist - 1;
