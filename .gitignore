@@ -15,6 +15,7 @@ octave-workspace
 
 # Data files
 *.csv
+*.h5
 
 # Misc
 papers/
