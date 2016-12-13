@@ -122,7 +122,7 @@ function generateRef(z_t,path,predicted_dist,N,dt,lr)
         z_2 = z_ref[:,i+1];
         a_k = (z_2[4] - z_1[4])/dt;
         beta_k = asin(lr*(z_2[3]-z_1[3])/(z_1[4]*dt));
-        u_ref[:,i] = [a_k; beta_k];
+        u_ref[:,i] = [beta_k;a_k];
     end
     return u_ref, z_ref, path_dist
 end
@@ -159,7 +159,7 @@ function generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop)
         z_1 = z_ref[:,i];
         z_2 = z_ref[:,i+1];
         beta_k = asin(lr*(z_2[3]-z_1[3])/(z_1[4]*dt));
-        u_ref[:,i] = [a_des; beta_k];
+        u_ref[:,i] = [beta_k;a_des];
     end
     return u_ref, z_ref, path_dist
 end
