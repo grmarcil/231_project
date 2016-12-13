@@ -1,10 +1,13 @@
 using JuMP, Ipopt, Interpolations
 
 function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
-  z_history = zeros(nz,Lsim)
-  u_history = zeros(nu,Lsim-1)
-  z_ref_history = Array{Float64}(nz,N+1,Lsim-1)
-  u_ref_history = Array{Float64}(nu,N,Lsim-1)
+  # Track variable history for export
+  z_cl_hist = zeros(nz,Lsim)
+  u_cl_hist = zeros(nu,Lsim-1)
+  z_ol_hist = Array{Float64}(nz,N+1,Lsim-1)
+  u_ol_hist = Array{Float64}(nu,N,Lsim-1)
+  z_ref_hist = Array{Float64}(nz,N+1,Lsim-1)
+  u_ref_hist = Array{Float64}(nu,N,Lsim-1)
   z_t = z0[:]
   # Auxiliary var used for path reference tracking
   path_dist = 0;
@@ -13,18 +16,22 @@ function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_s
   print("-Starting MPC solver loop-\n")
   for t = 1:Lsim-1
     print("$t,")
+    # Solve MPC problem
     u_vec, z_vec, u_ref, z_ref, path_dist = solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop)
+    # Update history vectors
+    z_cl_hist[:,t] = z_t[:]
+    u_cl_hist[:,t] = u_vec[:,1]
+    z_ol_hist[:,:,t] = z_vec
+    u_ol_hist[:,:,t] = u_vec
+    z_ref_hist[:,:,t] = z_ref
+    u_ref_hist[:,:,t] = u_ref
     # Update model based on dynamics with first MPC inputs
     u_t = u_vec[:,1]
-    z_history[:,t] = z_t[:]
-    u_history[:,t] = u_t[:]
-    z_ref_history[:,:,t] = z_ref
-    u_ref_history[:,:,t] = u_ref
     predicted_dist = path_dist + z_t[4]*dt;
     z_t = z_t + dt * zdot_fun(z_t,u_t,car_size[1])
   end
-  z_history[:,Lsim] = z_t[:]
-  return  u_history, z_history, u_ref_history, z_ref_history
+  z_cl_hist[:,Lsim] = z_t[:]
+  return u_cl_hist, z_cl_hist, u_ol_hist, z_ol_hist, u_ref_hist, z_ref_hist
 end
 
 function detectMode(z_t, y_stop)

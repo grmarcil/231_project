@@ -45,7 +45,7 @@ nz = 4;
 nu = 2;
 
 # Closed Loop MPC
-u_cl, z_cl, u_ref_cl, z_ref_cl = simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
+u_cl, z_cl, u_ol, z_ol, u_ref_ol, z_ref_ol = simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
 print("\n")
 print("Enter a filename (without .h5 extension)\n")
 print("Press Enter to use default name: mpc_sim\n")
@@ -57,7 +57,9 @@ print("Exporting Data Files\n")
 h5open("$filename.h5", "w") do file
     write(file, "u_cl", u_cl)
     write(file, "z_cl", z_cl)
-    write(file, "u_ref_cl", u_ref_cl)
-    write(file, "z_ref_cl", z_ref_cl)
+    write(file, "u_ol", u_ol)
+    write(file, "z_ol", z_ol)
+    write(file, "u_ref_ol", u_ref_ol)
+    write(file, "z_ref_ol", z_ref_ol)
 end
 print("Continue by running Julia_after.m in Matlab\n")
