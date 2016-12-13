@@ -118,11 +118,22 @@ function generateRef(z_t,path,predicted_dist,N,dt,lr)
     # it, to stop car and not give NaN reference
 
     for i=1:N
-        z_1 = z_ref[:,i];
-        z_2 = z_ref[:,i+1];
-        a_k = (z_2[4] - z_1[4])/dt;
-        beta_k = asin(lr*(z_2[3]-z_1[3])/(z_1[4]*dt));
-        u_ref[:,i] = [beta_k;a_k];
+        psi1 = z_ref[3,i];
+        psi2 = z_ref[3,i+1];
+        v1 = z_ref[4,i];
+        v2 = z_ref[4,i+1];
+
+        # saturate arcsin argument
+        sin_beta = lr*(psi2-psi1)/(v1*dt)
+        if sin_beta > 1
+            sin_beta = 1
+        elseif sin_beta < -1
+            sin_beta = -1
+        end
+
+        beta_k = asin(sin_beta)
+        a_k = (v2 - v1)/dt;
+        u_ref[:,i] = [beta_k;a_k]
     end
     return u_ref, z_ref, path_dist
 end
@@ -156,9 +167,19 @@ function generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop)
     end
 
     for i=1:N
-        z_1 = z_ref[:,i];
-        z_2 = z_ref[:,i+1];
-        beta_k = asin(lr*(z_2[3]-z_1[3])/(z_1[4]*dt));
+        psi1 = z_ref[3,i];
+        psi2 = z_ref[3,i+1];
+        v1 = z_ref[4,i];
+
+        # saturate arcsin argument
+        sin_beta = lr*(psi2-psi1)/(v1*dt)
+        if sin_beta > 1
+            sin_beta = 1
+        elseif sin_beta < -1
+            sin_beta = -1
+        end
+
+        beta_k = asin(sin_beta);
         u_ref[:,i] = [beta_k;a_des];
     end
     return u_ref, z_ref, path_dist
