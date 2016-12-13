@@ -46,6 +46,7 @@ nu = 2;
 
 # Closed Loop MPC
 u_cl, z_cl, u_ref_cl, z_ref_cl = simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
+print("\n")
 print("Enter a filename (without .h5 extension)\n")
 print("Press Enter to use default name: mpc_sim\n")
 filename = strip(readline(STDIN))

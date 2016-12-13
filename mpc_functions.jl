@@ -55,8 +55,8 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dis
 
     # Create model
     mpc = Model(solver=IpoptSolver(print_level=0))
-    @variable(mpc,  zmin[i] <= z[i=1:nz,t=0:N] <= zmax[i])
-    @variable(mpc,  umin[i] <= u[i=1:nu,t=0:N-1] <= umax[i])
+    @variable(mpc,  zmin[i] <= z[i=1:nz,t=1:N+1] <= zmax[i])
+    @variable(mpc,  umin[i] <= u[i=1:nu,t=1:N] <= umax[i])
 
     # Cost
     Q = eye(4);
@@ -64,12 +64,12 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dis
     #= @objective(mpc, Min, sum((z[:,t]-z_ref[:,t])'*Q*(z[:,t]-z_ref[:,t]) for =#
     #=     t=1:N)[1] + sum((u[:,t]-u_ref[:,t])'*R*(u[:,t]-u_ref[:,t]) for t=1:N-1)[1]) =#
     @objective(mpc, Min, sum((z[1,t]-z_ref[1,t])^2 + (z[2,t]-z_ref[2,t])^2 +
-        (z[3,t]-z_ref[3,t])^2 + (z[4,t]-z_ref[4,t])^2 for t=1:N) +
-        sum((u[1,t]-u_ref[1,t])^2 + (u[2,t]-u_ref[2,t])^2 for t=1:N-1))
+        (z[3,t]-z_ref[3,t])^2 + (z[4,t]-z_ref[4,t])^2 for t=1:N+1) +
+        sum((u[1,t]-u_ref[1,t])^2 + (u[2,t]-u_ref[2,t])^2 for t=1:N))
     #= @objective(mpc, Min, 0) =#
 
     # Dynamics constraints across the horizon
-    for t = 0:N-1
+    for t = 1:N
         @NLconstraint(mpc, z[1,t+1] == z[1,t] + dt*z[4,t]*cos(z[3,t]+u[1,t]))
         @NLconstraint(mpc, z[2,t+1] == z[2,t] + dt*z[4,t]*sin(z[3,t]+u[1,t]))
         @NLconstraint(mpc, z[3,t+1] == z[3,t] + dt*z[4,t]/lr*sin(u[1,t]))
@@ -77,7 +77,7 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dis
     end
 
     # Initial conditions
-    @constraint(mpc, z[:,0] .== z_t)
+    @constraint(mpc, z[:,1] .== z_t)
 
     # Solve the NLP
     solve(mpc)
