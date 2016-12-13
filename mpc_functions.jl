@@ -1,41 +1,62 @@
 using JuMP, Ipopt, Interpolations
 
-function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umax)
+function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
   z_history = zeros(nz,Lsim)
   u_history = zeros(nu,Lsim-1)
+  z_ref_history = Array{Float64}(nz,N+1,Lsim-1)
+  u_ref_history = Array{Float64}(nu,N,Lsim-1)
   z_t = z0[:]
   # Auxiliary var used for path reference tracking
   path_dist = 0;
   predicted_dist = 0;
 
+  print("-Starting MPC solver loop-\n")
   for t = 1:Lsim-1
-    print(t)
-    u_vec, z_vec, path_dist = solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umax,predicted_dist)
-    print("-MPC solved-")
+    print("$t,")
+    u_vec, z_vec, u_ref, z_ref, path_dist = solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop)
     # Update model based on dynamics with first MPC inputs
     u_t = u_vec[:,1]
     z_history[:,t] = z_t[:]
     u_history[:,t] = u_t[:]
+    z_ref_history[:,:,t] = z_ref
+    u_ref_history[:,:,t] = u_ref
     predicted_dist = path_dist + z_t[4]*dt;
-    z_t = z_t + dt*zdot_fun(z_t,u_t,car_size[1])
+    z_t = z_t + dt * zdot_fun(z_t,u_t,car_size[1])
   end
   z_history[:,Lsim] = z_t[:]
-  return  u_history, z_history
+  return  u_history, z_history, u_ref_history, z_ref_history
 end
 
-function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umax,predicted_dist)
+function detectMode(z_t, y_stop)
+    stopping_dist = 20
+    y_t = z_t[2]
+    dist_to_stop = y_stop - y_t
+    if dist_to_stop <= stopping_dist
+        mode = 2 # approaching stop sign
+    else
+        mode = 1
+    end
+    return mode
+end
+
+function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop)
     lr=car_size[1]
     Lf=car_size[2]
     Lr=car_size[3]
     w=car_size[4]
 
     # Generate path-following references
-    u_ref, z_ref, path_dist = generateRef(z_t,path,predicted_dist,N,dt,lr);
+    mode = detectMode(z_t, y_stop)
+    if mode == 1
+        u_ref, z_ref, path_dist = generateRef(z_t,path,predicted_dist,N,dt,lr);
+    elseif mode == 2
+        u_ref, z_ref, path_dist = generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop);
+    end
 
     # Create model
     mpc = Model(solver=IpoptSolver(print_level=0))
     @variable(mpc,  zmin[i] <= z[i=1:nz,t=0:N] <= zmax[i])
-    @variable(mpc, -umax[i] <= u[i=1:nu,t=0:N-1] <= umax[i])
+    @variable(mpc,  umin[i] <= u[i=1:nu,t=0:N-1] <= umax[i])
 
     # Cost
     Q = eye(4);
@@ -63,7 +84,7 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umax,predicted_dist)
     # Return the control plan
     # return getvalue(u[:,0])
     #return getvalue(u[:,0]), getvalue(z[:,1])
-    return getvalue(u), getvalue(z), path_dist
+    return getvalue(u), getvalue(z), u_ref, z_ref, path_dist
 end
 
 function generateRef(z_t,path,predicted_dist,N,dt,lr)
@@ -92,9 +113,46 @@ function generateRef(z_t,path,predicted_dist,N,dt,lr)
     for i=1:N
         z_1 = z_ref[:,i];
         z_2 = z_ref[:,i+1];
-        a_k = (z_2[3] - z_1[3])/dt;
-        beta_k = asin(lr*(z_2[4]-z_1[4])/(z_1[3]*dt));
+        a_k = (z_2[4] - z_1[4])/dt;
+        beta_k = asin(lr*(z_2[3]-z_1[3])/(z_1[4]*dt));
         u_ref[:,i] = [a_k; beta_k];
+    end
+    return u_ref, z_ref, path_dist
+end
+
+function generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop)
+    u_ref = Matrix(2,N);
+    z_ref = Matrix(4,N+1);
+    path_dist = findPathDist(z_t,path,predicted_dist);
+
+    # assume we want to do constant deceleration
+    y_t = z_t[2]
+    v_t = z_t[4]
+    t_stop = 2*(y_stop - y_t)/v_t
+    a_des = -v_t/t_stop
+
+    z_ref[:,1] = [path.itp_x[path_dist]; path.itp_y[path_dist]; path.itp_psi[path_dist]; v_t];
+
+    dist_t = path_dist;
+    v_ref_i = v_t;
+    for i=1:N
+        # update v_ref with acceleration command
+        v_ref_i = v_ref_i + a_des*dt
+        # how far car should have gone at this time step
+        dist_t = dist_t + v_ref_i*dt
+        # interpolate x, y, psi values based on path.dist array
+        x_ref_i = path.itp_x[dist_t]
+        y_ref_i = path.itp_y[dist_t]
+        psi_ref_i = path.itp_psi[dist_t]
+
+        z_ref[:,i+1] = [x_ref_i; y_ref_i; psi_ref_i; v_ref_i]
+    end
+
+    for i=1:N
+        z_1 = z_ref[:,i];
+        z_2 = z_ref[:,i+1];
+        beta_k = asin(lr*(z_2[3]-z_1[3])/(z_1[4]*dt));
+        u_ref[:,i] = [a_des; beta_k];
     end
     return u_ref, z_ref, path_dist
 end
