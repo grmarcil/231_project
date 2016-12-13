@@ -85,3 +85,8 @@ z_fig_name = ['figures/', datetime_str, '_z.png'];
 export_fig(z_fig, z_fig_name,'-m3')
 u_fig_name = ['figures/', datetime_str, '_u.png'];
 export_fig(u_fig, u_fig_name,'-m3')
+vid_name = ['figures/', datetime_str, '.avi'];
+vid = VideoWriter(vid_name);
+open(vid);
+writeVideo(vid,animation);
+close(vid);
