@@ -30,7 +30,11 @@ function animation = Plot_Simulation(z_cl, u_cl, lane_width, lane_length, path)
     auto.tyr = 0.8;              % tyre diameter [m]
     auto.dmax = 25*pi/180;       % maximum front wheel steering angle [rad]
     auto.drat = 14.5;            % ratio between steering wheel angle and front wheel angle
-    auto.d = auto.l - auto.df - auto.db;  % axis distance [m]
+    % changing this: Georg's code used the center rear axle as x,y, I think, bu
+    % ours uses the center of mass
+    %auto.d = auto.l - auto.df - auto.db;  % axis distance [m]
+    auto.d = (auto.l - auto.df - auto.db)/2;  % axis distance [m]
+
 
     %% Define roadmarkings
     % shorthand variables

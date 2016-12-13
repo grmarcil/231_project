@@ -85,8 +85,8 @@ function ageom = autogeometry(x,y,phi,beta,auto)
 
     ageom.fr = [x + (auto.d+auto.df)*cos(phi) ; y + (auto.d+auto.df)*sin(phi)] + auto.w/2*ageom.gr;
     ageom.fl = [x + (auto.d+auto.df)*cos(phi) ; y + (auto.d+auto.df)*sin(phi)] + auto.w/2*ageom.gl;
-    ageom.br = [x - auto.db*cos(phi) ; y - auto.db*sin(phi)] + auto.w/2*ageom.gr;
-    ageom.bl = [x - auto.db*cos(phi) ; y - auto.db*sin(phi)] + auto.w/2*ageom.gl;
+    ageom.br = [x - (auto.d+auto.db)*cos(phi) ; y - (auto.d+auto.db)*sin(phi)] + auto.w/2*ageom.gr;
+    ageom.bl = [x - (auto.d+auto.db)*cos(phi) ; y - (auto.d+auto.db)*sin(phi)] + auto.w/2*ageom.gl;
 
     % 3) Tyres -----------------------------------------------------------------------------------------
     delta = atan((1.738 + 1.738)/1.738*tan(beta));
@@ -95,7 +95,7 @@ function ageom = autogeometry(x,y,phi,beta,auto)
                                                        [0.5*auto.tyr*ageom.sta,-0.5*auto.tyr*ageom.sta];
     ageom.tfl =  ([x;y]+auto.d*ageom.gf+0.75*auto.w/2*ageom.gl)*[1,1] + ...
                                                        [0.5*auto.tyr*ageom.sta,-0.5*auto.tyr*ageom.sta];
-    ageom.tbr =  ([x;y]+0.75*auto.w/2*ageom.gr)*[1,1] + [0.5*auto.tyr*ageom.gb,-0.5*auto.tyr*ageom.gb];
-    ageom.tbl =  ([x;y]+0.75*auto.w/2*ageom.gl)*[1,1] + [0.5*auto.tyr*ageom.gb,-0.5*auto.tyr*ageom.gb];
+    ageom.tbr =  ([x;y]+auto.d*ageom.gb+0.75*auto.w/2*ageom.gr)*[1,1] + [0.5*auto.tyr*ageom.gb,-0.5*auto.tyr*ageom.gb];
+    ageom.tbl =  ([x;y]+auto.d*ageom.gb+0.75*auto.w/2*ageom.gl)*[1,1] + [0.5*auto.tyr*ageom.gb,-0.5*auto.tyr*ageom.gb];
 
 end
