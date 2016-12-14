@@ -20,7 +20,7 @@ car_size = [lr,Lf,Lr,width]
 # Import path planned in Matlab
 # First run Julia_setup.m
 path = importPath()
-lw = 3;
+lw = 5;
 ll = 30;
 # y coordinate for stop sign, approaching from below
 y_stop = -lw-(lf+df)-0.1;
@@ -30,9 +30,13 @@ Lsim = 150 # Simulation duration
 dt=0.1
 
 # Simulation Data
-v = 4.5; # m/s constant velocity
+v = 6; # m/s constant velocity
 # States [x;y;psi;v]
 z0 = [path.x[1]; path.y[1]; path.psi[1]; v];
+
+# Modify target vehicle starting state if desired
+use_target = true;
+ztarg0 = [lw+ll; lw/2; pi; v];
 
 zmax=[35;35;2*pi;10]
 zmin=[-35;-35;-2*pi;-10]
@@ -45,7 +49,12 @@ nz = 4;
 nu = 2;
 
 # Closed Loop MPC
-u_cl, z_cl, u_ol, z_ol, u_ref_ol, z_ref_ol = simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
+if use_target
+    u_cl, z_cl, u_ol, z_ol, u_ref_ol, z_ref_ol, z_targ = simulateCarMPCTarget(car_size,nz,nu,N,Lsim,dt,z0,ztarg0,path,zmin,zmax,umin,umax,y_stop)
+else
+    u_cl, z_cl, u_ol, z_ol, u_ref_ol, z_ref_ol = simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_stop)
+end
+
 print("\n")
 print("Enter a filename (without .h5 extension)\n")
 print("Press Enter to use default name: mpc_sim\n")
@@ -61,5 +70,8 @@ h5open("$filename.h5", "w") do file
     write(file, "z_ol", z_ol)
     write(file, "u_ref_ol", u_ref_ol)
     write(file, "z_ref_ol", z_ref_ol)
+    if use_target
+        write(file, "z_targ", z_targ)
+    end
 end
 print("Continue by running Julia_after.m in Matlab\n")

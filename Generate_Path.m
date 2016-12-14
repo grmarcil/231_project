@@ -5,14 +5,14 @@
 % Generate_Path()
 % ------------------------------------------------------------------------------
 % lane_length: length of all four roads approaching the intersection [m]
+% lane_width: width of a single lane [m]
 % ------------------------------------------------------------------------------
 % path: a struct containing dist, x, y, and psi trajectories for the ego vehicle
 % to follow. The struct also includes interpolation functions for x, y, and psi
 % according to distance travelled along the path
 % ------------------------------------------------------------------------------
 
-function path = Generate_Path(lane_length)
-    lane_width = 3;
+function path = Generate_Path(lane_length, lane_width)
     car_length = 4.9;
     % shorthand vars
     lw = lane_width;
