@@ -37,11 +37,11 @@ z0 = [path.x[1]; path.y[1]; path.psi[1]; v];
 # Modify target vehicle starting state if desired
 use_target = true;
 # Use this condition to make the ego vehicle wait
-ztarg0 = [lw+ll+35; lw/2; pi; v];
+ztarg0 = [lw+ll+33; lw/2; pi; v];
 # Use this condition to make the ego vehicle go ahead
-ztarg0 = [lw+ll+38; lw/2; pi; v];
+ztarg0 = [lw+ll+35; lw/2; pi; v];
 
-zmax=[35;35;2*pi;10]
+zmax=[35;35;2*pi;15]
 zmin=[-50;-35;-2*pi;-10]
 umax=[0.6;4.5] # 6.0s 0-60mph time
 umin=[-0.6;-8.0] # normal sedan braking limit

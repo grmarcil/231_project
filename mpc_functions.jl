@@ -130,7 +130,7 @@ end
 
 function shouldWait(z_targ_t)
     # Heuristics: ego vehicle can perform left turn and clear the intersection
-    # in roughly 4 seconds. Check if target will enter intersection within 5
+    # in roughly 3 seconds. Check if target will enter intersection within 5
     # seconds, wait if so.
     x_targ = z_targ_t[1]
     v_targ = z_targ_t[4]
@@ -138,14 +138,14 @@ function shouldWait(z_targ_t)
     time_to_enter = (x_targ - lw)/v_targ
     print(time_to_enter)
 
-    if time_to_enter < 3.8
+    if time_to_enter < 3.3
         return true
     else
         return false
     end
 end
 
-function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,last_mode,t)
+function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,last_mode,timestep)
     lr=car_size[1]
     Lf=car_size[2]
     Lr=car_size[3]
@@ -182,18 +182,22 @@ function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,uma
         # Full stop mode, penalize deviation from y=y_stop and v=0 heavily
         wz = [1;100;1;100];
         wu = [1;1];
-    elseif mode == 4 || mode == 5
+        wtarg = 0;
+    elseif mode == 4
         # Don't penalize v and a deviations much
         wz = [1;1;1;0.1];
         wu = [1;0.1];
+        wtarg = 100;
     else
         wz = [1;1;1;1];
         wu = [1;1];
+        wtarg = 0;
     end
     # Cost
-    @objective(mpc, Min, sum(wz[1]*(z[1,t]-z_ref[1,t])^2 + wz[2]*(z[2,t]-z_ref[2,t])^2 +
+    @NLobjective(mpc, Min, sum(wz[1]*(z[1,t]-z_ref[1,t])^2 + wz[2]*(z[2,t]-z_ref[2,t])^2 +
         wz[3]*(z[3,t]-z_ref[3,t])^2 + wz[4]*(z[4,t]-z_ref[4,t])^2 for t=1:N+1) +
-        sum(wu[1]*(u[1,t]-u_ref[1,t])^2 + wu[2]*(u[2,t]-u_ref[2,t])^2 for t=1:N))
+        sum(wu[1]*(u[1,t]-u_ref[1,t])^2 + wu[2]*(u[2,t]-u_ref[2,t])^2 for t=1:N)
+            + sum(wtarg/((z[1,t]-z_targ_t[1])^2) for t=1:N))
 
     # Dynamics constraints across the horizon
     for t = 1:N
@@ -217,7 +221,7 @@ function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,uma
         @constraint(mpc, (z[1,t] + w/2) <= lw) # right hand lane constraint
         # front right tire should not go above the top boundary of the
         # horizontal lane
-        @NLconstraint(mpc, (z[2,t] + Lf*sin(z[3,t]) - w/2*cos(z[3,t])) <= lw)
+        #= @NLconstraint(mpc, (z[2,t] + Lf*sin(z[3,t]) - w/2*cos(z[3,t])) <= lw) =#
 
         if mode <= 3 # driving vertically
             @constraint(mpc, (z[1,t] - w/2) >= 0) # centerline constraint
@@ -241,8 +245,8 @@ function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,uma
         if mode == 4
             x_targ0 = z_targ_t[1]
             v_targ = z_targ_t[4]
-            # stay 5m ahead of target
-            @constraint(mpc, z[1,t]+Lr+5 <= x_targ0 - dt*v_targ*t)
+            # stay at least 1m ahead of target
+            @constraint(mpc, z[1,t]+Lr+1 <= x_targ0 - dt*v_targ*t)
         end
         # wait to merge behind target car
         if mode == 5
@@ -496,19 +500,19 @@ function generateRefGoAhead(z_t,z_targ_t,path,predicted_dist,N,dt,lr)
         y_ref_i = path.itp_y[dist_t];
         psi_ref_i = path.itp_psi[dist_t];
         # how far car should have gone at this time step
-        while(speedUp)
-            dist_t = dist_t + v*dt;
-            # interpolate x, y, psi values based on path.dist array
-            x_ref_i = path.itp_x[dist_t];
-            y_ref_i = path.itp_y[dist_t];
-            psi_ref_i = path.itp_psi[dist_t];
-            if x_ref_i > safe_x
-                speedUp = true
-                v += 0.5
-            else
-                speedUp = false
-            end
-        end
+        #= while(speedUp) =#
+        #=     dist_t = dist_t + v*dt; =#
+        #=     # interpolate x, y, psi values based on path.dist array =#
+        #=     x_ref_i = path.itp_x[dist_t]; =#
+        #=     y_ref_i = path.itp_y[dist_t]; =#
+        #=     psi_ref_i = path.itp_psi[dist_t]; =#
+        #=     if x_ref_i > safe_x =#
+        #=         speedUp = true =#
+        #=         v += 0.5 =#
+        #=     else =#
+        #=         speedUp = false =#
+        #=     end =#
+        #= end =#
 
         # will have to adapt for non-static velocities
         z_ref[:,i+1] = [x_ref_i; y_ref_i; psi_ref_i; v];
