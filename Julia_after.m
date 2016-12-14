@@ -7,6 +7,9 @@ N=5;
 lane_width = 5;
 lane_length = 30;
 
+% toggle for with/without target vehicle
+use_target = true;
+
 path = Generate_Path(lane_length,lane_width);
 %filename = 'mpc_sim.h5';
 %filename = 'corner_infeas2.h5';
@@ -17,9 +20,16 @@ u_ol = h5read(filename,'/u_ol');
 z_ol = h5read(filename,'/z_ol');
 u_ref_ol = h5read(filename,'/u_ref_ol');
 z_ref_ol = h5read(filename,'/z_ref_ol');
+if use_target
+    z_targ = h5read(filename,'/z_targ');
+end
 
 %% Simulation
-animation = Plot_Simulation(z_cl, u_cl, lane_width, lane_length, path);
+if use_target
+    animation = Plot_Simulation_Target(z_cl, u_cl, z_targ, lane_width, lane_length, path);
+else
+    animation = Plot_Simulation(z_cl, u_cl, lane_width, lane_length, path);
+end
 %% Plot Results
 z_fig = figure;
 grid on
