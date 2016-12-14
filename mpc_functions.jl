@@ -579,4 +579,3 @@ function zdot_fun(z,u,l)
   zdot = [xdot;ydot;phidot;Vdot]
   return zdot
 end
-
