@@ -66,7 +66,7 @@ if filename == ""
     filename = "mpc_sim"
 end
 print("Exporting Data Files\n")
-h5open("$filename.h5", "w") do file
+h5open("data/$filename.h5", "w") do file
     write(file, "u_cl", u_cl)
     write(file, "z_cl", z_cl)
     write(file, "u_ol", u_ol)
