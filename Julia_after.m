@@ -11,9 +11,7 @@ lane_length = 30;
 use_target = true;
 
 path = Generate_Path(lane_length,lane_width);
-%filename = 'mpc_sim.h5';
-%filename = 'corner_infeas2.h5';
-filename = 'stopandgo.h5';
+filename = 'mpc_sim.h5';
 u_cl = h5read(filename,'/u_cl');
 z_cl = h5read(filename,'/z_cl');
 u_ol = h5read(filename,'/u_ol');

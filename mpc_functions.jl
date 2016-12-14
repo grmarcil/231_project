@@ -21,7 +21,7 @@ function simulateCarMPCTarget(car_size,nz,nu,N,Lsim,dt,z0,ztarg0,path,zmin,zmax,
   for t = 1:Lsim-1
     print("$t,")
     # Solve MPC problem
-    u_vec, z_vec, u_ref, z_ref, path_dist, mode = solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,mode)
+    u_vec, z_vec, u_ref, z_ref, path_dist, mode = solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,mode,t)
     # Update history vectors
     z_cl_hist[:,t] = z_t[:]
     u_cl_hist[:,t] = u_vec[:,1]
@@ -79,7 +79,7 @@ function simulateCarMPC(car_size,nz,nu,N,Lsim,dt,z0,path,zmin,zmax,umin,umax,y_s
   return u_cl_hist, z_cl_hist, u_ol_hist, z_ol_hist, u_ref_hist, z_ref_hist
 end
 
-function detectMode(z_t, y_stop, last_mode)
+function detectMode(z_t, z_targ_t, y_stop, last_mode)
     # should convert this to real state machine package
     # eg: https://github.com/tinybike/FiniteStateMachine.jl
     stopping_dist = 20
@@ -104,10 +104,20 @@ function detectMode(z_t, y_stop, last_mode)
     elseif last_mode == 3 && (abs(y_stop - y_t) < epsilon_y) && (v_t < epsilon_v)
         # v_t ~= 0 and at stop sign
         # "enter merge decision mode"
+        if shouldWait(z_targ_t)
+            mode = 5
+        else
+            mode = 4
+        end
+
+        print("mode $mode\n")
+    elseif last_mode == 4
+        # decided to go ahead of target
+        # "execute merge strategy"
         mode = 4
         print("mode 4\n")
-    elseif last_mode == 4 || last_mode == 5
-        # finished deciding on merge strategy
+    elseif last_mode == 5
+        # decided to wait for target to pass
         # "execute merge strategy"
         mode = 5
         print("mode 5\n")
@@ -118,7 +128,24 @@ function detectMode(z_t, y_stop, last_mode)
     return mode
 end
 
-function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,last_mode)
+function shouldWait(z_targ_t)
+    # Heuristics: ego vehicle can perform left turn and clear the intersection
+    # in roughly 4 seconds. Check if target will enter intersection within 5
+    # seconds, wait if so.
+    x_targ = z_targ_t[1]
+    v_targ = z_targ_t[4]
+    lw = 5.0 # TODO again need to move to an object/class based data structure to stop having to decide between hardcoding constants or passing crazy function argument strings
+    time_to_enter = (x_targ - lw)/v_targ
+    print(time_to_enter)
+
+    if time_to_enter < 3.8
+        return true
+    else
+        return false
+    end
+end
+
+function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,umax,predicted_dist,y_stop,last_mode,t)
     lr=car_size[1]
     Lf=car_size[2]
     Lr=car_size[3]
@@ -132,20 +159,17 @@ function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,uma
     # Mode 4 will be enterIntersection, triggered by mode=3or4 and v w/in
     # epsilon of 0. This will run the split front/behind merge controller in
     # Georg's paper
-    mode = detectMode(z_t, y_stop, last_mode)
+    mode = detectMode(z_t, z_targ_t, y_stop, last_mode)
     if mode == 1
         u_ref, z_ref, path_dist = generateRef(z_t,path,predicted_dist,N,dt,lr);
     elseif mode == 2
         u_ref, z_ref, path_dist = generateRefStopping(z_t,path,predicted_dist,N,dt,lr,y_stop);
     elseif mode == 3
         u_ref, z_ref, path_dist = generateRefStop(z_t,path,predicted_dist,N,dt,lr,y_stop);
-    elseif mode == 4
-        # this should ultimately be something else, that returns a binary
-        # variable, which transitions you to state 5 or 6 (wait or beat the
-        # target vehicle)
-        u_ref, z_ref, path_dist = generateRefGo(z_t,path,predicted_dist,N,dt,lr);
-    elseif mode == 5
-        u_ref, z_ref, path_dist = generateRefGo(z_t,path,predicted_dist,N,dt,lr);
+    elseif mode == 4 # merge before target
+        u_ref, z_ref, path_dist = generateRefGoAhead(z_t,z_targ_t,path,predicted_dist,N,dt,lr);
+    elseif mode == 5 # merge after target
+        u_ref, z_ref, path_dist = generateRefGoBehind(z_t,z_targ_t,path,predicted_dist,N,dt,lr);
     end
 
     # Create model
@@ -158,6 +182,10 @@ function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,uma
         # Full stop mode, penalize deviation from y=y_stop and v=0 heavily
         wz = [1;100;1;100];
         wu = [1;1];
+    elseif mode == 4 || mode == 5
+        # Don't penalize v and a deviations much
+        wz = [1;1;1;0.1];
+        wu = [1;0.1];
     else
         wz = [1;1;1;1];
         wu = [1;1];
@@ -208,6 +236,17 @@ function solveMPCTarget(car_size,nz,nu,N,dt,z_t,z_targ_t,path,zmin,zmax,umin,uma
             lambda[2,t]*(z[2,t]+Lf*sin(z[3,t])+w/2*cos(z[3,t])) >= 0) # horizontal centerline
             @constraint(mpc, lambda[1,t]+lambda[2,t] == 1)
         end
+
+        # merge ahead of target car safely
+        if mode == 4
+            x_targ0 = z_targ_t[1]
+            v_targ = z_targ_t[4]
+            # stay 5m ahead of target
+            @constraint(mpc, z[1,t]+Lr+5 <= x_targ0 - dt*v_targ*t)
+        end
+        # wait to merge behind target car
+        if mode == 5
+        end
     end
 
     # Solve the NLP
@@ -224,13 +263,8 @@ function solveMPC(car_size,nz,nu,N,dt,z_t,path,zmin,zmax,umin,umax,predicted_dis
     Lr=car_size[3]
     w=car_size[4]
 
-    # Generate path-following references
-    # Idea for full stop: create mode 3, triggered within 0.5m of y_stop
-    # This mode will provide a reference of v=0 and y=y_stop for all horizon
-    # steps. Need anything else? Change costs in this mode? Try second.
-    # Mode 4 will be enterIntersection, triggered by mode=3or4 and v w/in
-    # epsilon of 0. This will run the split front/behind merge controller in
-    # Georg's paper
+    #fix this to work with new z_targ_t detectMode option, or just refactor all
+    #of this code, lots of duplication because rushing to finish project
     mode = detectMode(z_t, y_stop, last_mode)
     if mode == 1
         u_ref, z_ref, path_dist = generateRef(z_t,path,predicted_dist,N,dt,lr);
@@ -413,6 +447,68 @@ function generateRefGo(z_t,path,predicted_dist,N,dt,lr)
         x_ref_i = path.itp_x[dist_t];
         y_ref_i = path.itp_y[dist_t];
         psi_ref_i = path.itp_psi[dist_t];
+
+        # will have to adapt for non-static velocities
+        z_ref[:,i+1] = [x_ref_i; y_ref_i; psi_ref_i; v];
+    end
+    # should extend to do some logic here giving end of path if you've gone past
+    # it, to stop car and not give NaN reference
+
+    for i=1:N
+        psi1 = z_ref[3,i];
+        psi2 = z_ref[3,i+1];
+        v1 = z_ref[4,i];
+        v2 = z_ref[4,i+1];
+
+        # saturate arcsin argument
+        sin_beta = lr*(psi2-psi1)/(v1*dt)
+        if sin_beta > 1
+            sin_beta = 1
+        elseif sin_beta < -1
+            sin_beta = -1
+        end
+
+        beta_k = asin(sin_beta)
+        a_k = (v2 - v1)/dt;
+        u_ref[:,i] = [beta_k;a_k]
+    end
+    return u_ref, z_ref, path_dist
+end
+function generateRefGoAhead(z_t,z_targ_t,path,predicted_dist,N,dt,lr)
+    u_ref = Matrix(2,N);
+    z_ref = Matrix(4,N+1);
+    path_dist = findPathDist(z_t,path,predicted_dist);
+
+    # TODO refactor this so you don't repeat this constant v
+    v = 6;
+    x_targ = z_targ_t[1]
+    v_targ = z_targ_t[4]
+    z_ref[:,1] = [path.itp_x[path_dist]; path.itp_y[path_dist]; path.itp_psi[path_dist]; v];
+
+    dist_t = path_dist;
+    for i=1:N
+        speedUp = true;
+        safe_x = x_targ - 7 - v_targ*dt*i
+        # define first all vars outside of local while
+        dist_t = dist_t + v*dt;
+        # interpolate x, y, psi values based on path.dist array
+        x_ref_i = path.itp_x[dist_t];
+        y_ref_i = path.itp_y[dist_t];
+        psi_ref_i = path.itp_psi[dist_t];
+        # how far car should have gone at this time step
+        while(speedUp)
+            dist_t = dist_t + v*dt;
+            # interpolate x, y, psi values based on path.dist array
+            x_ref_i = path.itp_x[dist_t];
+            y_ref_i = path.itp_y[dist_t];
+            psi_ref_i = path.itp_psi[dist_t];
+            if x_ref_i > safe_x
+                speedUp = true
+                v += 0.5
+            else
+                speedUp = false
+            end
+        end
 
         # will have to adapt for non-static velocities
         z_ref[:,i+1] = [x_ref_i; y_ref_i; psi_ref_i; v];
